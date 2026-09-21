@@ -91,7 +91,9 @@ def test_full_run_renders_every_section(app):
     ]
     assert not at.error
     assert len(at.dataframe) >= 15
-    assert len(at.get("arrow_vega_lite_chart")) >= 15
+    # Streamlit renamed this element type between releases; count either name.
+    charts = len(at.get("vega_lite_chart")) + len(at.get("arrow_vega_lite_chart"))
+    assert charts >= 15
 
 
 def test_every_section_registers_an_export(app):

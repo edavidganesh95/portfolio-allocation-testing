@@ -2,6 +2,17 @@
 
 Newest first. The entries record *why* the methodology changed, not just what moved.
 
+## v5.3 — chart clarity and dependency robustness
+
+- The risk/return scatter no longer encodes tail loss as bubble size. Area is hard to
+  read, largely repeated volatility, and needed a size key spanning a wider range than
+  the data. Every point is now the same size; CVaR remains in the table above the chart
+  and in each point's tooltip. The chart is retitled *Risk and return*.
+- The end-to-end app test counts charts under either of Streamlit's element names. A
+  fresh install (which takes the newest libraries, as CI does) renamed
+  `arrow_vega_lite_chart` to `vega_lite_chart`; the app itself was unaffected, and the
+  suite was verified on pandas 3.0, numpy 2.5 and Streamlit 1.64.
+
 ## v5.2 — review fixes and rename
 
 **Renamed** to *Portfolio Allocation Testing* (page title, masthead, PDF cover and header,

@@ -964,10 +964,9 @@ with tab_construction:
 
     risk_return = charts.risk_return_scatter(asset_stats, CVAR_COLUMN)
     block(
-        "Risk, return and tail loss",
-        f"The same table as a map. Position is realised CAGR against annualised "
-        f"volatility; bubble size is historical CVaR at {cvar_level:.0%}, so a "
-        "large bubble marks a stream whose bad periods are unusually bad.",
+        "Risk and return",
+        "The same table as a map. Position is realised CAGR against annualised "
+        "volatility. Hover a point for its Sharpe, drawdown and tail loss.",
     )
     chart(risk_return)
 
@@ -1432,13 +1431,12 @@ with tab_construction:
                     "x": "Volatility",
                     "y": "CAGR",
                     "label": "Ticker",
-                    "size": CVAR_COLUMN,
                     "colors": ASSET_COLORS,
                     "x_title": "Annualised volatility",
                     "y_title": "Realised CAGR",
                 },
-                title="Risk, return and tail loss",
-                note=f"Bubble size is historical CVaR at {cvar_level:.0%}.",
+                title="Risk and return",
+                note="Position is realised CAGR against annualised volatility.",
                 height_in=2.8,
             ),
             ex.PageBreak(),

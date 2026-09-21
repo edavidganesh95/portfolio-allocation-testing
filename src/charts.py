@@ -209,7 +209,12 @@ def risk_return_scatter(
     cvar_column: str,
     height: int = 400,
 ) -> alt.Chart:
-    """Volatility against CAGR, sized by tail loss, one point per asset."""
+    """Volatility against CAGR, one equally sized point per asset.
+
+    Bubble area used to encode tail loss, but that mostly repeated volatility, is
+    hard to read by eye and needed a legend for a range wider than the data. The
+    exact CVaR stays in the table above the chart and in each point's tooltip.
+    """
     frame = stats.reset_index().rename(columns={"index": "Ticker"})
     tickers = frame["Ticker"].tolist()
 
@@ -228,13 +233,7 @@ def risk_return_scatter(
             scale=alt.Scale(zero=False, nice=True, padding=22),
         ),
     )
-    points = base.mark_point(filled=True, opacity=0.9).encode(
-        size=alt.Size(
-            f"{cvar_column}:Q",
-            title=cvar_column,
-            scale=alt.Scale(range=[90, 620]),
-            legend=alt.Legend(format=".1%"),
-        ),
+    points = base.mark_point(filled=True, opacity=0.9, size=260).encode(
         color=asset_color(tickers, legend=False),
         tooltip=[
             alt.Tooltip("Ticker:N"),

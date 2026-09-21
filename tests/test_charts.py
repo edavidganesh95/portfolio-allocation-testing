@@ -123,6 +123,14 @@ def test_risk_return_scatter(returns):
     rendered = spec(charts.risk_return_scatter(stats, "CVaR 95%"))
     assert "layer" in rendered
 
+    points = rendered["layer"][0]
+    # Every point is the same size: size is a fixed mark property, not an encoding,
+    # so there is no size legend either.
+    assert "size" not in points["encoding"]
+    assert points["mark"]["size"] > 0
+    tooltips = {tip["field"] for tip in points["encoding"]["tooltip"]}
+    assert "CVaR 95%" in tooltips  # tail loss stays available on hover
+
 
 def test_correlation_heatmap_annotates_cells(returns):
     corr = returns.corr()
