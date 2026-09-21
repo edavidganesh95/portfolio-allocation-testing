@@ -1,0 +1,35 @@
+benchmark: ACWI
+assets:
+  TMFC:
+    name: Motley Fool 100 Index ETF
+    role: US compounder / growth engine
+  VWO:
+    name: Vanguard FTSE Emerging Markets ETF
+    role: Emerging markets
+  ACWI:
+    name: iShares MSCI ACWI ETF
+    role: Existing global allocation / control
+  IEFA:
+    name: iShares Core MSCI EAFE ETF
+    role: Traditional developed ex-US
+  SCHF:
+    name: Schwab International Equity ETF
+    role: Broad developed ex-US
+  SPDW:
+    name: SPDR Portfolio Developed World ex-US ETF
+    role: Broad developed ex-US
+  VPL:
+    name: Vanguard FTSE Pacific ETF
+    role: Developed Pacific incl. South Korea
+  IPAC:
+    name: iShares Core MSCI Pacific ETF
+    role: Developed Pacific
+  AVDE:
+    name: Avantis International Equity ETF
+    role: Developed ex-US factor tilt
+  FLCA:
+    name: Franklin FTSE Canada ETF
+    role: Canada
+  VEA:
+    name: Vanguard FTSE Developed Markets ETF
+    role: Broad developed ex-US

@@ -1,0 +1,6 @@
+reference_portfolio:
+  name: Example reference portfolio
+  weights:
+    TMFC: 0.60
+    VWO: 0.20
+    ACWI: 0.20

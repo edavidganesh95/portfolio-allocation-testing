@@ -1,0 +1,14 @@
+# Application runtime
+streamlit>=1.44
+pandas>=2.2
+numpy>=2.0
+scipy>=1.14
+scikit-learn>=1.5
+yfinance>=0.2.54
+altair>=5.5
+PyYAML>=6.0
+
+# Reporting: print-ready PDF export and formatted workbooks
+matplotlib>=3.8
+reportlab>=4.0
+openpyxl>=3.1
