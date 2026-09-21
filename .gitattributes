@@ -1,0 +1,15 @@
+# Normalise to LF in the repository; check out native on Windows.
+* text=auto
+
+*.py     text eol=lf
+*.toml   text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+LICENSE  text eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xlsx binary
