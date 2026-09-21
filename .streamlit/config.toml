@@ -1,0 +1,57 @@
+# Ledger design system — see src/theme.py for the tokens and the rationale.
+# Base colours are set here so Streamlit's own widgets are themed natively;
+# src/ui.py only adds component polish on top.
+
+[theme]
+base = "light"
+primaryColor = "#17395E"
+backgroundColor = "#FAF8F5"
+secondaryBackgroundColor = "#F4F1EC"
+textColor = "#10151C"
+linkColor = "#17395E"
+borderColor = "#E3DED5"
+dataframeBorderColor = "#E3DED5"
+dataframeHeaderBackgroundColor = "#F4F1EC"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "0.55rem"
+buttonRadius = "0.5rem"
+font = "sans-serif"
+headingFont = "sans-serif"
+codeFont = "monospace"
+
+# Semantic colours used by st.success / st.warning / st.error and badges.
+greenColor = "#237A5B"
+greenBackgroundColor = "#E7F2EC"
+redColor = "#9A2F28"
+redBackgroundColor = "#FAEBE9"
+yellowColor = "#B07A18"
+yellowBackgroundColor = "#FBF2DF"
+blueColor = "#17395E"
+blueBackgroundColor = "#E7EDF4"
+grayColor = "#6B7480"
+grayBackgroundColor = "#F4F1EC"
+
+# Fallback palette for any chart not drawn through src/charts.py.
+chartCategoricalColors = [
+    "#17395E", "#C1762B", "#2E7D8F", "#7A5AA0",
+    "#2F7A52", "#A83A32", "#4C7FB8", "#8A7A2E",
+    "#8C5A3C", "#9E4478", "#56707F", "#9C7D24",
+]
+chartSequentialColors = [
+    "#F5F7FA", "#E3EAF2", "#CBD9E7", "#AEC3DA",
+    "#8FAAC9", "#7092B9", "#5478A5", "#3B5F8E",
+    "#284A75", "#17395E",
+]
+
+[theme.sidebar]
+backgroundColor = "#F4F1EC"
+secondaryBackgroundColor = "#FAF8F5"
+borderColor = "#E3DED5"
+primaryColor = "#17395E"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
