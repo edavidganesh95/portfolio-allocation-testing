@@ -1,5 +1,7 @@
 # Portfolio Allocation Testing
 
+Live Streamlit app here: https://portfolio-allocation-testing.streamlit.app/
+
 A **returns-only strategic portfolio research engine** for long-term, buy-and-hold
 ETF allocation, delivered as a Streamlit application with print-ready PDF and Excel
 export.
