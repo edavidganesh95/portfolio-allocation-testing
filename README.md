@@ -4,6 +4,8 @@ A **returns-only strategic portfolio research engine** for long-term, buy-and-ho
 ETF allocation, delivered as a Streamlit application with print-ready PDF and Excel
 export.
 
+Live link to Streamlit: https://portfolio-allocation-testing.streamlit.app/
+
 The project asks a practical question:
 
 > If I am free to choose a new starting allocation today, what buy-and-hold ETF mix
