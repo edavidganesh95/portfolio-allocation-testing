@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 import streamlit as st
 
-from . import theme
+from . import guide, theme
 
 PRIMARY = theme.NAVY
 ACCENT = theme.BRASS
@@ -204,6 +204,146 @@ def apply_theme() -> None:
             font-size: 1.24rem !important;
             font-weight: 720;
             color: var(--ink);
+        }}
+
+        /* ---------- plain-English guide ---------- */
+        .plain-card {{
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--brass);
+            background: var(--surface);
+            border-radius: 10px;
+            padding: .85rem 1.05rem 1rem;
+            margin: .35rem 0 .8rem;
+        }}
+        .plain-head {{
+            font-size: .66rem;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+            font-weight: 750;
+            color: var(--brass);
+            margin-bottom: .55rem;
+        }}
+        .plain-grid {{
+            display: grid;
+            grid-template-columns: 1.15fr 1.1fr 1fr;
+            gap: 1.35rem;
+        }}
+        .plain-label {{
+            font-size: .74rem;
+            font-weight: 720;
+            color: var(--navy-deep);
+            margin-bottom: .25rem;
+        }}
+        .plain-card p, .plain-card li {{
+            font-size: .85rem;
+            line-height: 1.55;
+            color: var(--ink-soft);
+            margin: 0;
+        }}
+        .plain-card ul {{ margin: 0; padding-left: 1.05rem; }}
+        .plain-card li {{ margin-bottom: .3rem; }}
+        @media (max-width: 1050px) {{
+            .plain-grid {{ grid-template-columns: 1fr; gap: .9rem; }}
+        }}
+
+        .glossary {{ margin: 0; }}
+        .glossary dt {{
+            font-weight: 720;
+            color: var(--navy-deep);
+            font-size: .9rem;
+            margin-top: .95rem;
+        }}
+        .glossary dt:first-child {{ margin-top: .2rem; }}
+        .glossary dd {{
+            margin: .15rem 0 0;
+            font-size: .85rem;
+            line-height: 1.55;
+            color: var(--ink-soft);
+            max-width: 98ch;
+        }}
+        .glossary dd.ex, .glossary dd.lf {{ color: var(--muted); }}
+        .glossary dd.fm {{
+            font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+            font-size: .77rem;
+            color: var(--muted);
+        }}
+
+        /* ---------- start here (landing page) ---------- */
+        .start-intro {{
+            font-size: 1rem;
+            line-height: 1.62;
+            color: var(--ink-soft);
+            max-width: 88ch;
+            margin: .2rem 0 1.15rem;
+        }}
+        .start-label {{
+            font-size: .66rem;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+            font-weight: 750;
+            color: var(--brass);
+            margin: 1.2rem 0 .55rem;
+        }}
+        .start-steps, .idea-strip {{
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: .8rem;
+        }}
+        .start-step, .idea {{
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 10px;
+            padding: .8rem .9rem .9rem;
+        }}
+        .start-step .n {{
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            background: var(--navy);
+            color: #fff;
+            font-weight: 700;
+            font-size: .8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: .45rem;
+        }}
+        .start-step b, .idea b {{
+            display: block;
+            color: var(--navy-deep);
+            font-size: .9rem;
+            margin-bottom: .2rem;
+        }}
+        .start-step p, .idea span {{
+            font-size: .83rem;
+            line-height: 1.5;
+            color: var(--ink-soft);
+            margin: 0;
+        }}
+        .idea {{ border-top: 3px solid var(--brass); }}
+        .pages-list {{
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            overflow: hidden;
+        }}
+        .pages-list div {{
+            display: grid;
+            grid-template-columns: 4.2rem 15rem 1fr;
+            gap: .6rem;
+            padding: .55rem .9rem;
+            border-bottom: 1px solid var(--border);
+            font-size: .84rem;
+            line-height: 1.45;
+            color: var(--ink-soft);
+        }}
+        .pages-list div:last-child {{ border-bottom: 0; }}
+        .pages-list b {{ color: var(--navy-deep); }}
+        .pages-list .pg {{ color: var(--brass); font-weight: 700; }}
+        @media (max-width: 1050px) {{
+            .start-steps, .idea-strip {{ grid-template-columns: 1fr 1fr; }}
+            .pages-list div {{ grid-template-columns: 3.5rem 1fr; }}
+            .pages-list div span:last-child {{ grid-column: 1 / -1; }}
         }}
 
         /* ---------- callout ---------- */
@@ -480,6 +620,85 @@ def callout(html_text: str, tone: str = "navy") -> None:
         f'--callout-bg:{background};--callout-border:{border};">{html_text}</div>',
         unsafe_allow_html=True,
     )
+
+
+def plain_english(section_key: str) -> None:
+    """Always-visible summary at the top of a page, in ordinary language."""
+    guide_for_page = guide.SECTION_GUIDES[section_key]
+    look = "".join(f"<li>{_esc(item)}</li>" for item in guide_for_page.look_for)
+    cannot = "".join(f"<li>{_esc(item)}</li>" for item in guide_for_page.cannot)
+    st.markdown(
+        '<div class="plain-card">'
+        '<div class="plain-head">In plain English</div>'
+        '<div class="plain-grid">'
+        '<div><div class="plain-label">What this page does</div>'
+        f"<p>{_esc(guide_for_page.what)}</p></div>"
+        '<div><div class="plain-label">What to look for</div>'
+        f"<ul>{look}</ul></div>"
+        '<div><div class="plain-label">What it cannot tell you</div>'
+        f"<ul>{cannot}</ul></div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _glossary_html(terms: Sequence[guide.Term]) -> str:
+    parts = ['<dl class="glossary">']
+    for term in terms:
+        parts.append(f"<dt>{_esc(term.heading)}</dt>")
+        parts.append(f"<dd>{_esc(term.plain)}</dd>")
+        if term.example:
+            parts.append(f'<dd class="ex"><b>Example.</b> {_esc(term.example)}</dd>')
+        if term.look_for:
+            parts.append(
+                f'<dd class="lf"><b>What to look for.</b> {_esc(term.look_for)}</dd>'
+            )
+        if term.formula:
+            parts.append(f'<dd class="fm">{_esc(term.formula)}</dd>')
+    parts.append("</dl>")
+    return "".join(parts)
+
+
+def glossary_expander(section_key: str) -> None:
+    """Collapsed guide to every term a page uses."""
+    terms = guide.terms_for(section_key)
+    with st.expander(
+        f"Plain-English guide to the terms on this page ({len(terms)})",
+        expanded=False,
+    ):
+        st.markdown(_glossary_html(terms), unsafe_allow_html=True)
+
+
+def landing_guide() -> None:
+    """The 'start here' panel shown before the first run."""
+    steps = "".join(
+        '<div class="start-step">'
+        f'<div class="n">{number}</div><b>{_esc(title)}</b><p>{_esc(body)}</p></div>'
+        for number, (title, body) in enumerate(guide.LANDING_STEPS, start=1)
+    )
+    ideas = "".join(
+        f'<div class="idea"><b>{_esc(name)}</b><span>{_esc(body)}</span></div>'
+        for name, body in guide.LANDING_IDEAS
+    )
+    pages = "".join(
+        f'<div><span class="pg">Page {number}</span>'
+        f"<span><b>{_esc(page.title)}</b></span><span>{_esc(page.intro)}</span></div>"
+        for number, page in enumerate(guide.SECTION_GUIDES.values(), start=1)
+    )
+    st.markdown(
+        f'<div class="start-intro">{_esc(guide.LANDING_INTRO)}</div>'
+        '<div class="start-label">Start here</div>'
+        f'<div class="start-steps">{steps}</div>'
+        '<div class="start-label">Four ideas run through every page</div>'
+        f'<div class="idea-strip">{ideas}</div>'
+        '<div class="start-label">The six pages at a glance</div>'
+        f'<div class="pages-list">{pages}</div>',
+        unsafe_allow_html=True,
+    )
+    core = [guide.GLOSSARY[key] for key in guide.LANDING_CORE_TERMS]
+    with st.expander("The four numbers you will see most often", expanded=True):
+        st.markdown(_glossary_html(core), unsafe_allow_html=True)
+    callout(_esc(guide.LANDING_NOTE), tone="brass")
 
 
 def methodology_strip(methodologies: dict[str, str]) -> None:

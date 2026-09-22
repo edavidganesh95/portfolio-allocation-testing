@@ -2,6 +2,27 @@
 
 Newest first. The entries record *why* the methodology changed, not just what moved.
 
+## v5.4 — plain-English guide
+
+Written for a reader with no investing background.
+
+- Every page opens with an always-visible **In plain English** card: what the page does,
+  what to look for, and what it cannot tell you.
+- Every page has a collapsed **guide to its terms** with a definition, a worked example and
+  what to look for. The five scattered metric expanders it replaces are gone, so each term is
+  now explained in exactly one place (`src/guide.py`), and the on-screen pages, the sidebar
+  tooltips and the PDFs all read from it.
+- The landing screen has a start-here panel: four steps, the four ideas behind every page
+  (return, risk, diversification, evidence), a map of the six pages and the four numbers
+  used most, plus the not-advice note.
+- All 30 chart and table captions and every sidebar tooltip were rewritten in ordinary
+  language; jargon such as "covariance" and "in-sample" now lives only in the glossary.
+- PDFs open each section with the same summary and close it with its key terms; the full
+  report ends with an alphabetical glossary.
+- Tests keep the copy honest: every measure the app prints has an explanation, nothing
+  advises or promises, summaries avoid specialist jargon, and every caption and tooltip
+  the app uses exists (and none are orphaned).
+
 ## v5.3 — chart clarity and dependency robustness
 
 - The risk/return scatter no longer encodes tail loss as bubble size. Area is hard to

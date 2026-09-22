@@ -75,7 +75,7 @@ def _run_research(at: AppTest) -> AppTest:
 
 def test_landing_page_waits_for_a_run(app):
     assert not app.tabs
-    assert any("Workflow" in md.value for md in app.markdown)
+    assert any("Start here" in md.value for md in app.markdown)
 
 
 def test_full_run_renders_every_section(app):
@@ -236,3 +236,47 @@ def test_masthead_carries_the_product_name(app):
     html = " ".join(md.value for md in app.markdown)
     assert "Portfolio Allocation Testing" in html
     assert "Sleeve" not in html
+
+
+def test_landing_page_explains_how_to_start(app):
+    text = " ".join(md.value for md in app.markdown)
+    assert "Start here" in text
+    assert "Press Run research" in text
+    assert "The six pages at a glance" in text
+    assert "investment advice" in text
+    # the four headline numbers are explained before anything has been run
+    assert any("four numbers" in expander.label for expander in app.expander)
+
+
+def test_every_page_opens_with_a_plain_english_summary_and_a_guide(app):
+    at = _run_research(app)
+    text = [md.value for md in at.markdown]
+
+    summaries = [t for t in text if "In plain English" in t and "plain-card" in t]
+    assert len(summaries) == 6
+    for summary in summaries:
+        assert "What this page does" in summary
+        assert "What to look for" in summary
+        assert "What it cannot tell you" in summary
+
+    guides = [e for e in at.expander if "Plain-English guide" in e.label]
+    assert len(guides) == 6
+
+
+def test_the_scattered_metric_expanders_are_gone(app):
+    at = _run_research(app)
+    labels = " | ".join(e.label for e in at.expander)
+    assert "What each diversification metric means" not in labels
+    assert "What each summary metric means" not in labels
+    assert "How to read these results" not in labels
+
+
+def test_sidebar_controls_carry_plain_language_help(app):
+    helps = [w.help for w in app.sidebar.slider if w.help] + [
+        w.help for w in app.sidebar.selectbox if w.help
+    ]
+    assert helps and all("covariance" not in h.lower() for h in helps)
+    shrink = next(
+        s for s in app.sidebar.slider if s.label == "Expected-return shrinkage"
+    )
+    assert "trust" in shrink.help.lower()

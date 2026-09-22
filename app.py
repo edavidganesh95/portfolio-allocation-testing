@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src import analytics, charts, tables, theme
+from src import analytics, charts, guide, tables, theme
 from src import exporting as ex
 from src.compute import (
     BootstrapOutput,
@@ -71,9 +71,12 @@ from src.ui import (
     chart,
     export_bar,
     footer,
+    glossary_expander,
+    landing_guide,
     legend_key,
     methodology_strip,
     page_header,
+    plain_english,
     section,
     status_row,
 )
@@ -117,45 +120,7 @@ SECTION_LABELS = [
     "Summary of Findings",
 ]
 
-MODEL_METHODOLOGIES = {
-    "Equal Weight": (
-        "Allocates the same capital weight to every ETF. It uses no expected-return "
-        "forecast and no covariance estimate, so it is a useful naïve benchmark."
-    ),
-    "Minimum Variance": (
-        "Chooses long-only weights that minimise estimated portfolio variance. "
-        "Risk is estimated using Ledoit-Wolf shrinkage covariance."
-    ),
-    "Risk Parity": (
-        "Chooses weights so each ETF contributes approximately the same amount of "
-        "portfolio volatility. Higher-volatility assets usually receive less capital."
-    ),
-    "Maximum Diversification": (
-        "Maximises the diversification ratio: weighted standalone volatility divided "
-        "by portfolio volatility. It rewards return streams that diversify one another."
-    ),
-    "Maximum Sharpe": (
-        "Maximises expected excess return per unit of volatility. Historical return "
-        "estimates are shrunk toward a beta-implied anchor from the user-selected market benchmark."
-    ),
-    "Diversified Maximum Sharpe": (
-        "Maximises the same shrunk expected Sharpe, but only inside a "
-        "diversified feasible set: a tighter single-ETF cap, a minimum effective "
-        "ETF count and a maximum single risk-contribution share."
-    ),
-    "Minimum CVaR": (
-        "Minimises historical Conditional Value at Risk: the average portfolio loss "
-        "inside the worst tail of observed return periods."
-    ),
-    "Maximum Return / CVaR": (
-        "Maximises shrunk expected excess return per unit of historical tail loss. "
-        "It is the tail-risk analogue of a Sharpe-style construction."
-    ),
-    "HRP Diversification": (
-        "Groups ETFs by historical return correlation, then recursively allocates "
-        "more capital to lower-risk branches of that hierarchy. It uses no expected-return forecast."
-    ),
-}
+MODEL_METHODOLOGIES = guide.METHOD_BLURBS
 
 ROLLING_WINDOWS = {
     "monthly": (12, "12-month"),
@@ -192,17 +157,14 @@ def _research_controls_fragment() -> None:
             options=all_tickers,
             default=all_tickers,
             format_func=lambda t: f"{t} — {cfg.assets[t].role}",
-            help="Predefined ETFs included with the project.",
+            help=guide.HELP["universe_curated"],
             key="control_selected_curated",
         )
         custom_universe_raw = st.text_area(
             "Add Yahoo Finance tickers",
             value="",
             placeholder="e.g. QQQM, IJR, VXUS, 2800.HK",
-            help=(
-                "Enter any Yahoo Finance-compatible ticker. Separate symbols with "
-                "commas, spaces, semicolons or line breaks."
-            ),
+            help=guide.HELP["universe_custom"],
             key="control_custom_universe",
         )
         custom_universe = parse_ticker_input(custom_universe_raw)
@@ -219,7 +181,7 @@ def _research_controls_fragment() -> None:
             "Return frequency",
             ["monthly", "weekly", "daily"],
             index=0,
-            help="Monthly is the recommended default for a long-horizon buy-and-hold study.",
+            help=guide.HELP["frequency"],
             key="control_frequency",
         )
 
@@ -228,10 +190,7 @@ def _research_controls_fragment() -> None:
             "Market benchmark",
             options=list(MARKET_BENCHMARK_PRESETS),
             index=0,
-            help=(
-                "Defines the broad market used to estimate each ETF's beta. "
-                "The benchmark does not need to be part of the candidate universe."
-            ),
+            help=guide.HELP["benchmark"],
             key="control_market_benchmark_choice",
         )
         if MARKET_BENCHMARK_PRESETS[market_benchmark_choice] is None:
@@ -240,7 +199,7 @@ def _research_controls_fragment() -> None:
                     "Custom benchmark ticker",
                     value="",
                     placeholder="e.g. QQQ, IWM, ^GSPC",
-                    help="Any Yahoo Finance-compatible ticker with sufficient overlapping history.",
+                    help=guide.HELP["benchmark_custom"],
                     key="control_market_benchmark_custom",
                 )
                 .strip()
@@ -256,10 +215,7 @@ def _research_controls_fragment() -> None:
                 step=0.5,
                 min_value=-20.0,
                 max_value=30.0,
-                help=(
-                    "Your annual expected return for the selected market benchmark. "
-                    "Historical benchmark performance is not automatically treated as a forecast."
-                ),
+                help=guide.HELP["market_return"],
                 key="control_market_return_prior",
             )
             / 100.0
@@ -270,10 +226,7 @@ def _research_controls_fragment() -> None:
             max_value=1.0,
             value=0.50,
             step=0.05,
-            help=(
-                "0 = historical CAGR only. 1 = fully use the beta-implied anchor "
-                "rf + beta × (market return assumption − rf)."
-            ),
+            help=guide.HELP["shrinkage"],
             key="control_shrinkage",
         )
         max_weight = st.slider(
@@ -282,11 +235,16 @@ def _research_controls_fragment() -> None:
             max_value=1.00,
             value=0.70,
             step=0.05,
+            help=guide.HELP["max_weight"],
             key="control_max_weight",
         )
         risk_free_rate = (
             st.number_input(
-                "Risk-free rate (%)", value=0.0, step=0.25, key="control_risk_free_rate"
+                "Risk-free rate (%)",
+                value=0.0,
+                step=0.25,
+                help=guide.HELP["risk_free"],
+                key="control_risk_free_rate",
             )
             / 100.0
         )
@@ -296,7 +254,7 @@ def _research_controls_fragment() -> None:
                 options=[90, 95, 97, 99],
                 index=1,
                 format_func=lambda x: f"{x}%",
-                help="95% means the average loss in the worst 5% of observed periods.",
+                help=guide.HELP["cvar"],
                 key="control_cvar_level",
             )
             / 100.0
@@ -310,7 +268,7 @@ def _research_controls_fragment() -> None:
                 max_value=70,
                 value=50,
                 step=5,
-                help="Tighter cap used only by Diversified Maximum Sharpe.",
+                help=guide.HELP["div_max_weight"],
                 key="control_diversified_max_weight",
             )
             / 100.0
@@ -321,10 +279,7 @@ def _research_controls_fragment() -> None:
             max_value=6.0,
             value=3.0,
             step=0.5,
-            help=(
-                "Requires the inverse-Herfindahl effective ETF count to stay above "
-                "this level. It prevents one or two holdings from dominating capital."
-            ),
+            help=guide.HELP["div_min_effective"],
             key="control_diversified_min_effective_assets",
         )
         diversified_max_risk_share = (
@@ -334,7 +289,7 @@ def _research_controls_fragment() -> None:
                 max_value=80,
                 value=50,
                 step=5,
-                help="Caps the share of portfolio variance risk attributed to any one ETF.",
+                help=guide.HELP["div_max_risk"],
                 key="control_diversified_max_risk_share",
             )
             / 100.0
@@ -345,22 +300,21 @@ def _research_controls_fragment() -> None:
             "Simulation horizon (years)",
             options=[5, 10, 15, 20],
             index=1,
+            help=guide.HELP["boot_horizon"],
             key="control_bootstrap_horizon",
         )
         bootstrap_simulations = st.selectbox(
             "Simulation paths",
             options=[1_000, 5_000, 10_000, 25_000],
             index=2,
+            help=guide.HELP["boot_paths"],
             key="control_bootstrap_simulations",
         )
         bootstrap_block = st.selectbox(
             "Block length (months)",
             options=[1, 3, 6, 12],
             index=1,
-            help=(
-                "Months are sampled in contiguous blocks. Longer blocks preserve "
-                "more short-run serial structure."
-            ),
+            help=guide.HELP["boot_block"],
             key="control_bootstrap_block",
         )
         bootstrap_seed = st.number_input(
@@ -369,6 +323,7 @@ def _research_controls_fragment() -> None:
             max_value=1_000_000,
             value=42,
             step=1,
+            help=guide.HELP["boot_seed"],
             key="control_bootstrap_seed",
         )
         bootstrap_initial_wealth = st.number_input(
@@ -376,6 +331,7 @@ def _research_controls_fragment() -> None:
             min_value=1_000.0,
             value=100_000.0,
             step=10_000.0,
+            help=guide.HELP["boot_wealth"],
             key="control_bootstrap_initial_wealth",
         )
 
@@ -384,10 +340,7 @@ def _research_controls_fragment() -> None:
             "Training lookback",
             options=["36 months", "60 months", "Expanding"],
             index=0,
-            help=(
-                "Only data available before each historical entry date is used. "
-                "Expanding uses all prior history."
-            ),
+            help=guide.HELP["wf_lookback"],
             key="control_wf_lookback_label",
         )
         wf_holding_months = st.selectbox(
@@ -395,6 +348,7 @@ def _research_controls_fragment() -> None:
             options=[3, 6, 12],
             index=2,
             format_func=lambda x: f"{x} months",
+            help=guide.HELP["wf_holding"],
             key="control_wf_holding_months",
         )
 
@@ -402,7 +356,7 @@ def _research_controls_fragment() -> None:
         enable_reference = st.checkbox(
             "Compare against a reference portfolio",
             value=True,
-            help="Optional apples-to-apples benchmark for the construction methods.",
+            help=guide.HELP["reference_enable"],
             key="control_enable_reference",
         )
 
@@ -422,7 +376,7 @@ def _research_controls_fragment() -> None:
             value="",
             placeholder="e.g. VOO, QQQM",
             disabled=not enable_reference,
-            help="Any Yahoo Finance-compatible ticker can be used.",
+            help=guide.HELP["reference_custom"],
             key="control_reference_custom",
         )
         reference_custom = parse_ticker_input(reference_custom_raw)
@@ -566,14 +520,7 @@ def stop_with_error(message: str) -> None:
 
 
 if active is None:
-    callout(
-        "<b>Workflow:</b> configure the investable universe and optional "
-        "reference portfolio in the sidebar, then run the research. "
-        "Portfolio Construction builds candidate starting allocations; Multi-Period "
-        "Analysis shows how every applicable construction rule changes across lookbacks; "
-        "Diversification & Overlap asks whether the portfolio is truly spread across "
-        "distinct return streams. Every section can be exported as a print-ready PDF once a run completes."
-    )
+    landing_guide()
     footer()
     st.stop()
 
@@ -894,6 +841,20 @@ def figure_height(rows: int, per_row: float = 0.26, base: float = 0.95) -> float
     return float(min(3.9, max(1.8, per_row * max(rows, 1) + base)))
 
 
+def guided(section_key: str, blocks_factory):
+    """Wrap a section's PDF blocks with its plain-English summary and key terms."""
+
+    def build(with_terms: bool = True) -> list:
+        blocks = list(blocks_factory())
+        after = next((i for i, b in enumerate(blocks) if isinstance(b, ex.Text)), 0) + 1
+        blocks[after:after] = guide.pdf_intro(section_key)
+        if with_terms:
+            blocks.extend(guide.pdf_terms(section_key))
+        return blocks
+
+    return build
+
+
 #: Sections register their builders here as they render, so the combined
 #: report contains exactly the sections this run was able to produce. It is
 #: mirrored into session state so the export path can be exercised end to end
@@ -920,12 +881,12 @@ with tab_construction:
     section(
         "Section 1",
         "Portfolio construction",
-        "Understand the common return sample, inspect how the candidate ETFs "
-        "have behaved, then compare several portfolio-construction philosophies "
-        "on the exact same data.",
+        guide.SECTION_GUIDES["construction"].intro,
     )
+    plain_english("construction")
+    glossary_expander("construction")
 
-    block("Common return sample")
+    block("Common return sample", guide.caption("common_sample"))
     d1, d2, d3, d4 = st.columns(4)
     with d1:
         st.metric("Candidate assets", len(optimizer_tickers))
@@ -950,11 +911,7 @@ with tab_construction:
             "usable common history: " + ", ".join(excluded)
         )
 
-    block(
-        "Return-stream diagnostics",
-        "Every column is computed on the identical common sample, so the rows "
-        "are directly comparable.",
-    )
+    block("Return-stream diagnostics", guide.caption("diagnostics"))
     asset_stats = cached_summary_table(
         optimizer_returns, frequency, risk_free_rate, cvar_level
     )
@@ -963,18 +920,11 @@ with tab_construction:
     )
 
     risk_return = charts.risk_return_scatter(asset_stats, CVAR_COLUMN)
-    block(
-        "Risk and return",
-        "The same table as a map. Position is realised CAGR against annualised "
-        "volatility. Hover a point for its Sharpe, drawdown and tail loss.",
-    )
+    block("Risk and return", guide.caption("risk_return"))
     chart(risk_return)
 
     growth_long = analytics.growth_frame(optimizer_returns)
-    block(
-        "Growth of $1",
-        "Click a ticker in the legend to isolate its path.",
-    )
+    block("Growth of $1", guide.caption("growth"))
 
     @st.fragment
     def _render_growth_chart() -> None:
@@ -993,12 +943,7 @@ with tab_construction:
     _render_growth_chart()
 
     drawdown_long = analytics.drawdown_frame(optimizer_returns)
-    block(
-        "Drawdown profile",
-        "The same history from the holder's perspective: distance below the "
-        "previous high-water mark, which is what determines whether a position "
-        "is actually held through a decline.",
-    )
+    block("Drawdown profile", guide.caption("drawdown"))
     chart(charts.drawdown_chart(drawdown_long, optimizer_tickers))
 
     rolling_window, rolling_label = ROLLING_WINDOWS.get(frequency, (12, "12-period"))
@@ -1023,12 +968,7 @@ with tab_construction:
         .reset_index()
         .melt(id_vars="Asset A", var_name="Asset B", value_name="Correlation")
     )
-    block(
-        "Return correlation",
-        "Rows and columns are ordered by hierarchical clustering, so ETFs that "
-        "behave alike sit together and redundant blocks become visible. Brick "
-        "means the pair repeats each other; teal means it diversifies.",
-    )
+    block("Return correlation", guide.caption("correlation"))
     chart(charts.correlation_heatmap(corr_long, corr_order))
 
     with st.expander("Correlation matrix — numeric values", expanded=False):
@@ -1076,11 +1016,7 @@ with tab_construction:
             )
         )
 
-    block(
-        "Construction methods",
-        "Eight philosophies fitted on identical data. Hover the marker beside "
-        "each name for its methodology.",
-    )
+    block("Construction methods", guide.caption("methods"))
     methodology_strip(MODEL_METHODOLOGIES)
 
     # A method the solver could not converge on is dropped from every section, so
@@ -1106,12 +1042,7 @@ with tab_construction:
     )
 
     weights_long = analytics.weights_long(weights)
-    block(
-        "Allocation by method",
-        "Each row is one complete portfolio. Stacked rather than grouped so a "
-        "double-digit universe still reads as an allocation instead of a forest "
-        "of slivers.",
-    )
+    block("Allocation by method", guide.caption("allocation"))
     chart(
         charts.weights_composition_chart(
             weights_long, optimizer_tickers, construction_methods
@@ -1128,14 +1059,7 @@ with tab_construction:
         construction_returns, frequency, risk_free_rate, cvar_level
     )
 
-    block(
-        "Construction-method return & risk metrics",
-        "These are in-sample buy-and-hold diagnostics: each method sets starting "
-        "weights once at the beginning of the sample and then allows them to drift. "
-        "Maximum Sharpe "
-        "means maximum model-implied Sharpe using the shrunk expected returns, "
-        "so its realised historical Sharpe need not be the highest row.",
-    )
+    block("Construction-method return & risk metrics", guide.caption("method_metrics"))
     tables.render(
         tables.style(
             construction_stats,
@@ -1143,13 +1067,7 @@ with tab_construction:
         )
     )
 
-    block(
-        "The opportunity set & efficient frontier",
-        "The dots are randomly simulated feasible portfolios under the same "
-        "long-only and maximum-weight constraints. The frontier itself is solved "
-        "exactly with target-return/minimum-variance optimisation; it is not "
-        "inferred from the cloud.",
-    )
+    block("The opportunity set & efficient frontier", guide.caption("frontier"))
 
     # Canonical export / downstream view uses Shrunk E(r). Interactive controls
     # below are display-only and run inside a fragment so changing them does not
@@ -1301,26 +1219,18 @@ with tab_construction:
     _render_frontier_explorer()
 
     frontier_mix = analytics.frontier_composition(mv_frontier, "Volatility")
-    block(
-        "How the frontier is built",
-        "Composition of the solved frontier as risk is dialled up. It shows "
-        "which ETFs the optimiser leans on to buy incremental expected return.",
-    )
+    block("How the frontier is built", guide.caption("frontier_build"))
     chart(charts.frontier_composition_chart(frontier_mix, optimizer_tickers))
 
     block(
         "Expected-return sensitivity: historical vs shrunk E(r)",
-        "Both curves use the same covariance matrix and constraints. Only the "
-        "expected-return estimate changes. A large shift demonstrates why "
-        "mean-variance weights can be highly sensitive to return assumptions.",
+        guide.caption("sensitivity"),
     )
     chart(charts.sensitivity_frontier_chart(sensitivity_frontier))
 
     block(
         "Return–CVaR opportunity set",
-        f"The tail-risk view replaces volatility with historical CVaR at the "
-        f"{cvar_level:.0%} level. Lower CVaR is better. The exact line is the "
-        "minimum-CVaR portfolio available at each expected-return target.",
+        guide.caption("cvar_frontier", cvar=f"{cvar_level:.0%}"),
     )
     cvar_cloud = cached_cvar_opportunity_set(
         feasible_cloud, optimizer_returns, cvar_level
@@ -1597,7 +1507,10 @@ with tab_construction:
         return blocks
 
     export_bar(
-        pdf_builder("Section 1 — Portfolio construction", _section1_blocks),
+        pdf_builder(
+            "Section 1 — Portfolio construction",
+            guided("construction", _section1_blocks),
+        ),
         stamp("section-1-construction"),
         excel_builder(_section1_tables),
         stamp("section-1-construction"),
@@ -1608,7 +1521,11 @@ with tab_construction:
         key_prefix="s1",
     )
     SECTION_EXPORTS.append(
-        ("Section 1 — Portfolio construction", _section1_blocks, _section1_tables)
+        (
+            "Section 1 — Portfolio construction",
+            guided("construction", _section1_blocks),
+            _section1_tables,
+        )
     )
 
 
@@ -1620,11 +1537,10 @@ with tab_robustness:
     section(
         "Section 2",
         "Multi-period analysis",
-        "Two complementary sensitivity checks. First, each applicable construction "
-        "method is rebuilt using 3Y, 5Y and full history to show how much the starting "
-        "allocation depends on the estimation window. Separately, today's fixed starting "
-        "allocations are evaluated over 1Y, 3Y, 5Y and full-history buy-and-hold periods.",
+        guide.SECTION_GUIDES["multi_period"].intro,
     )
+    plain_english("multi_period")
+    glossary_expander("multi_period")
 
     callout(
         "<b>How to read this:</b> 1Y is a realised-performance diagnostic only. "
@@ -1634,12 +1550,7 @@ with tab_robustness:
         "universe is unchanged; HRP is rebuilt from each window's correlation/risk hierarchy."
     )
 
-    block(
-        "Refit robustness — all construction methods",
-        "Every applicable rule is rebuilt on 3Y, 5Y and full history. The compact table "
-        "shows how much each shorter-window allocation differs from its full-history version, "
-        "plus the largest holding and number of active ETFs in each refit.",
-    )
+    block("Refit robustness — all construction methods", guide.caption("refit"))
 
     stability_display = multi_period_stability.copy()
     if reference_weights is not None and reference_returns is not None:
@@ -1790,10 +1701,7 @@ with tab_robustness:
 
     block(
         "Realised buy-and-hold metrics by period — all portfolios",
-        "These are not re-optimised returns. Each portfolio uses its current full-sample "
-        "starting weights, is placed at the beginning of the selected historical window and "
-        "then allowed to drift naturally. Use the metric selector to compare every portfolio "
-        "on the same 1Y / 3Y / 5Y / Full window.",
+        guide.caption("realised_periods"),
     )
 
     if multi_period_metrics.empty:
@@ -1933,7 +1841,10 @@ with tab_robustness:
         return blocks
 
     export_bar(
-        pdf_builder("Section 2 — Multi-period analysis", _section2_blocks),
+        pdf_builder(
+            "Section 2 — Multi-period analysis",
+            guided("multi_period", _section2_blocks),
+        ),
         stamp("section-2-multi-period"),
         excel_builder(_section2_tables),
         stamp("section-2-multi-period"),
@@ -1941,7 +1852,11 @@ with tab_robustness:
         key_prefix="s2",
     )
     SECTION_EXPORTS.append(
-        ("Section 2 — Multi-period analysis", _section2_blocks, _section2_tables)
+        (
+            "Section 2 — Multi-period analysis",
+            guided("multi_period", _section2_blocks),
+            _section2_tables,
+        )
     )
 
 
@@ -1957,21 +1872,12 @@ with tab_bootstrap:
     section(
         "Section 3",
         "Bootstrap simulation",
-        "A stress test of long-term outcomes. The engine repeatedly rearranges blocks "
-        "of the historical monthly record to create many alternative market paths, "
-        "then asks how each buy-and-hold starting allocation behaves across them.",
+        guide.SECTION_GUIDES["bootstrap"].intro,
     )
+    plain_english("bootstrap")
+    glossary_expander("bootstrap")
 
-    callout(
-        "<b>What is this doing?</b> Think of the historical monthly returns as a deck "
-        "of cards. The bootstrap repeatedly reshuffles contiguous blocks from that deck "
-        "to create many plausible alternative sequences. Every portfolio receives the "
-        "same sequence in each simulation, so differences come from the portfolio — not "
-        "from one method getting an easier simulated market.",
-        tone="navy",
-    )
-
-    block("Simulation design")
+    block("Simulation design", guide.caption("sim_design"))
     status_row(
         [
             (
@@ -2046,12 +1952,7 @@ with tab_bootstrap:
     if bootstrap_result is not None:
         bootstrap_summary = bootstrap_result.summary
 
-        block(
-            "Long-horizon outcome summary",
-            "These are simulated outcomes, not forecasts. The median is the middle "
-            "simulation; the 5th percentile is a deliberately poor outcome that only "
-            "5% of simulated paths finished below.",
-        )
+        block("Long-horizon outcome summary", guide.caption("boot_summary"))
         tables.render(
             tables.style(
                 bootstrap_summary,
@@ -2077,9 +1978,7 @@ with tab_bootstrap:
         ]
         block(
             f"Where ${bootstrap_initial_wealth:,.0f} could end up after {bootstrap_horizon} years",
-            "The black marker is the median simulated ending wealth. The coloured bar "
-            "is the middle 50% of outcomes and the thin line spans the 5th to 95th "
-            "percentiles. Wider ranges mean greater uncertainty across simulated paths.",
+            guide.caption("boot_range"),
         )
         chart(charts.terminal_wealth_range_chart(terminal_plot, bootstrap_horizon))
         st.caption(
@@ -2115,11 +2014,7 @@ with tab_bootstrap:
             if not display_portfolios:
                 display_portfolios = chosen_portfolios
 
-            block(
-                "Terminal wealth distribution",
-                "This shows the full distribution behind the percentile summary. Curves that "
-                "overlap heavily are difficult to distinguish on simulated terminal wealth alone.",
-            )
+            block("Terminal wealth distribution", guide.caption("boot_dist"))
             wealth_hist = analytics.histogram_frame(
                 {
                     name: bootstrap_result.terminal_wealth[name]
@@ -2144,7 +2039,7 @@ with tab_bootstrap:
                 )
             )
 
-            block("Annualised return distribution")
+            block("Annualised return distribution", guide.caption("boot_cagr"))
             cagr_hist = analytics.histogram_frame(
                 {name: bootstrap_result.cagr[name] for name in display_portfolios}
             )
@@ -2160,11 +2055,7 @@ with tab_bootstrap:
 
         _render_bootstrap_distributions()
 
-        block(
-            "Simulated maximum drawdown — all portfolios",
-            "Every portfolio is included here. This asks how deep the worst peak-to-trough "
-            "decline became somewhere along each simulated path.",
-        )
+        block("Simulated maximum drawdown — all portfolios", guide.caption("boot_dd"))
         dd_hist = analytics.histogram_frame(
             {name: bootstrap_result.max_drawdown[name] for name in chosen_portfolios}
         )
@@ -2176,12 +2067,7 @@ with tab_bootstrap:
             )
         )
 
-        block(
-            "Path fan",
-            "Pick one portfolio to see how uncertainty widens through time. The central "
-            "line is the median wealth trajectory; the shaded bands contain progressively "
-            "wider portions of the simulated paths.",
-        )
+        block("Path fan", guide.caption("fan"))
 
         export_fan_portfolio = (
             "Diversified Maximum Sharpe"
@@ -2226,12 +2112,7 @@ with tab_bootstrap:
         bootstrap_probability_table = bootstrap_summary[prob_cols].rename(
             columns=probability_labels
         )
-        block(
-            "Outcome probabilities",
-            "Plain-language frequencies across the simulated paths. These are not p-values "
-            "or statistical-significance tests; they simply count how often each simulated "
-            "long-term outcome occurred.",
-        )
+        block("Outcome probabilities", guide.caption("probabilities"))
         tables.render(
             tables.style(
                 bootstrap_probability_table,
@@ -2372,7 +2253,10 @@ with tab_bootstrap:
             ]
 
         export_bar(
-            pdf_builder("Section 3 — Bootstrap simulation", _section3_blocks),
+            pdf_builder(
+                "Section 3 — Bootstrap simulation",
+                guided("bootstrap", _section3_blocks),
+            ),
             stamp("section-3-bootstrap"),
             excel_builder(_section3_tables),
             stamp("section-3-bootstrap"),
@@ -2380,7 +2264,11 @@ with tab_bootstrap:
             key_prefix="s3",
         )
         SECTION_EXPORTS.append(
-            ("Section 3 — Bootstrap simulation", _section3_blocks, _section3_tables)
+            (
+                "Section 3 — Bootstrap simulation",
+                guided("bootstrap", _section3_blocks),
+                _section3_tables,
+            )
         )
 
 
@@ -2396,10 +2284,10 @@ with tab_walkforward:
     section(
         "Section 4",
         "Testing the portfolios without hindsight",
-        "This is the real-time-style check. At each historical entry date, the model "
-        "uses only information that was available then, builds a starting allocation, "
-        "and leaves it untouched for the following holding period.",
+        guide.SECTION_GUIDES["walk_forward"].intro,
     )
+    plain_english("walk_forward")
+    glossary_expander("walk_forward")
 
     callout(
         f"<b>How the test works:</b> Look back {wf_lookback_label} → build the starting "
@@ -2468,7 +2356,7 @@ with tab_walkforward:
                 tally["Wins"], tally["Tests"]
             )
 
-        block("Validation coverage")
+        block("Validation coverage", guide.caption("validation"))
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.metric("First entry", first_oos.strftime("%b %Y"))
@@ -2481,9 +2369,7 @@ with tab_walkforward:
 
         block(
             f"Independent {wf_holding_months}-month outcomes",
-            "Each row summarises separate historical entry experiments — not one stitched "
-            "trading strategy. The point is to ask whether the starting-allocation rule "
-            "continued to look sensible when the future was unknown.",
+            guide.caption("wf_outcomes"),
         )
         if wf_holding_months < 12:
             st.caption(
@@ -2515,32 +2401,6 @@ with tab_walkforward:
                     },
                     highlight=["Reference Portfolio"],
                 )
-            )
-
-        with st.expander("ⓘ How to read these results", expanded=False):
-            st.markdown(
-                f"""
-                **Median Return** — the middle annualised result across the {completed_periods}
-                independent holding periods. Half the tests finished above it and half below it.
-
-                **Worst / Best Return** — the weakest and strongest annualised result across
-                those historical entry dates. They show how sensitive the portfolio was to when
-                the investor happened to start.
-
-                **Median Volatility** — the typical annualised amount of month-to-month movement
-                experienced during a test. Higher means a bumpier ride.
-
-                **Median Max Drawdown** — the typical worst peak-to-trough fall experienced
-                inside a holding period.
-
-                **Beat Current Portfolio** — how many independent tests finished with a higher
-                return than the Reference Portfolio. For example, `2 of 4 (50%)` means the method
-                beat the current portfolio in two of the four historical entry experiments.
-
-                **No hindsight / no rebalancing** — only returns dated before each entry are used
-                to fit a portfolio. Once the test begins, the starting holdings are left alone and
-                their weights change naturally as prices move.
-                """
             )
 
         # Keep audit detail accessible in the application without spending two
@@ -2699,7 +2559,10 @@ with tab_walkforward:
             ]
 
         export_bar(
-            pdf_builder("Section 4 — Testing without hindsight", _section4_blocks),
+            pdf_builder(
+                "Section 4 — Testing without hindsight",
+                guided("walk_forward", _section4_blocks),
+            ),
             stamp("section-4-without-hindsight"),
             excel_builder(_section4_tables),
             stamp("section-4-without-hindsight"),
@@ -2709,7 +2572,7 @@ with tab_walkforward:
         SECTION_EXPORTS.append(
             (
                 "Section 4 — Testing without hindsight",
-                _section4_blocks,
+                guided("walk_forward", _section4_blocks),
                 _section4_tables,
             )
         )
@@ -2728,11 +2591,10 @@ with tab_diversification:
     section(
         "Section 5",
         "How diversified is each portfolio, really?",
-        "Owning several ETFs does not automatically mean risk is well spread. This section "
-        "looks separately at how many holdings a portfolio owns, how evenly the money is "
-        "distributed, how evenly risk is distributed, how similarly the holdings move, and "
-        "how much volatility reduction diversification actually provides.",
+        guide.SECTION_GUIDES["diversification"].intro,
     )
+    plain_english("diversification")
+    glossary_expander("diversification")
 
     div_corr = base_corr
     div_clusters = correlation_clusters(div_corr)
@@ -2815,13 +2677,7 @@ with tab_diversification:
         columns={"Effective ETFs": "Effective Holdings"}
     )
 
-    block(
-        "Diversification profile",
-        "Actual ETFs tells you how many holdings exist. Effective Holdings asks how many "
-        "equally-sized positions the capital concentration resembles. Effective Risk Bets "
-        "asks the same question of risk contribution. The remaining columns show how much "
-        "the holdings move together and how much one holding dominates total portfolio risk.",
-    )
+    block("Diversification profile", guide.caption("div_profile"))
     tables.render(
         tables.style(
             profile_display,
@@ -2845,43 +2701,6 @@ with tab_diversification:
             highlight=["Reference Portfolio"],
         )
     )
-
-    with st.expander("ⓘ What each diversification metric means", expanded=False):
-        st.markdown(
-            r"""
-            **Actual ETFs** — the number of economically meaningful ETF positions in the
-            portfolio (weights above 0.01%, which filters only numerical solver dust). This is the literal holding count.
-
-            **Effective Holdings** — asks how evenly the *money* is spread. It is
-            $1 / \sum w_i^2$. If a portfolio owns four ETFs but most of the money sits in
-            one or two, its effective holding count can be closer to two than four. Higher
-            means capital is distributed more evenly.
-
-            **Historical Volatility** — how much the buy-and-hold portfolio actually moved
-            up and down over the common historical sample, annualised. It is a direct risk
-            number rather than a concentration statistic.
-
-            **Effective Risk Bets** — applies the same concentration idea to each ETF's
-            share of portfolio variance. If one ETF creates most of the volatility, this
-            number approaches one even when the portfolio owns many tickers. Higher means
-            risk is spread across more independent contributors.
-
-            **Weighted Correlation** — the average historical correlation between distinct
-            ETF pairs, giving more influence to pairs that receive more capital. Lower means
-            the holdings' return streams tend to move less alike. This measures *economic
-            return overlap*, not overlap in the underlying stock holdings.
-
-            **Diversification Ratio (DR)** — weighted standalone volatility divided by the
-            volatility of the combined portfolio. A value close to 1 means combining the
-            assets removes little volatility. Higher values mean imperfect correlations are
-            reducing more volatility once the holdings are combined.
-
-            **Largest Risk Contributor / Share** — identifies the ETF responsible for the
-            largest portion of total portfolio variance and quantifies that share. A 70%
-            largest risk share means one holding is doing roughly seven-tenths of the risk
-            work even if its capital weight is lower.
-            """
-        )
 
     # ------------------------------------------------------------------
     # Return–Diversification Frontier
@@ -2911,13 +2730,7 @@ with tab_diversification:
         if name in return_div_named["Portfolio"].tolist()
     ]
 
-    block(
-        "Return–Diversification Frontier",
-        "For each minimum expected return, the line shows the most diversified feasible "
-        "portfolio under the same long-only and maximum-weight rules. Named portfolio "
-        "methods are plotted on top so you can see the expected return they offer for "
-        "the diversification they achieve.",
-    )
+    block("Return–Diversification Frontier", guide.caption("div_frontier"))
     chart(
         charts.return_diversification_frontier_chart(
             return_div_frontier,
@@ -3066,7 +2879,10 @@ with tab_diversification:
         ]
 
     export_bar(
-        pdf_builder("Section 5 — Diversification & overlap", _section5_blocks),
+        pdf_builder(
+            "Section 5 — Diversification & overlap",
+            guided("diversification", _section5_blocks),
+        ),
         stamp("section-5-diversification"),
         excel_builder(_section5_tables),
         stamp("section-5-diversification"),
@@ -3074,7 +2890,11 @@ with tab_diversification:
         key_prefix="s5",
     )
     SECTION_EXPORTS.append(
-        ("Section 5 — Diversification & overlap", _section5_blocks, _section5_tables)
+        (
+            "Section 5 — Diversification & overlap",
+            guided("diversification", _section5_blocks),
+            _section5_tables,
+        )
     )
 
 
@@ -3089,11 +2909,10 @@ with tab_decision:
     section(
         "Section 6",
         "Summary of Findings",
-        "This page brings together the main findings from portfolio construction, "
-        "historical analysis, simulations, out-of-sample testing and diversification. "
-        "Use it to compare expected return, risk, robustness, diversification and the "
-        "amount of capital that would need to be reallocated.",
+        guide.SECTION_GUIDES["summary"].intro,
     )
+    plain_english("summary")
+    glossary_expander("summary")
 
     selection_names = [
         name
@@ -3297,58 +3116,7 @@ with tab_decision:
             if column in selection_scorecard.columns
         ]
 
-        with st.expander("ⓘ What each summary metric means", expanded=False):
-            st.markdown(
-                f"""
-                **Expected Return E(r)** — the model's annual return estimate using the selected
-                historical/shrinkage assumptions. It is an input to optimisation, not a promise.
-
-                **Expected Volatility** — annualised portfolio volatility implied by the common
-                covariance model and the portfolio's starting weights. Lower means a less volatile
-                modelled return stream.
-
-                **Expected Sharpe** — expected excess return divided by expected volatility. It
-                measures modelled return efficiency, not realised historical performance.
-
-                **Historical CAGR** — the annualised compound return that these starting weights
-                actually produced over the common historical sample when bought once and allowed
-                to drift.
-
-                **Bootstrap Median CAGR** — the middle annualised return across the
-                {bootstrap_simulations:,} simulated {bootstrap_horizon}-year paths.
-
-                **Bootstrap 5th Wealth** — a deliberately poor simulated ending wealth outcome:
-                only about 5% of the resampled paths finished below it. It is not a guaranteed
-                downside floor.
-
-                **OOS Median Return** — the middle annualised result across the independent
-                no-hindsight historical entry tests.
-
-                **Beat Current Portfolio** — how many of those independent tests produced a higher
-                return than the current/reference allocation, shown as both a count and percentage.
-
-                **Actual ETFs** — the literal number of holdings, ignoring only tiny numerical
-                solver dust. **Effective Holdings** asks how evenly the money is spread, while
-                **Effective Risk Bets** asks how evenly portfolio risk is spread.
-
-                **Diversification Ratio** — the volatility reduction achieved by combining assets
-                that do not move perfectly together. A value near 1 indicates little diversification
-                benefit; higher values indicate more.
-
-                **Largest Risk Share** — the percentage of total portfolio variance contribution
-                coming from the single biggest risk-driving ETF.
-
-                **Capital to Reallocate** — the minimum percentage of the current portfolio that
-                must move into different holdings to reach the alternative starting allocation.
-                """
-            )
-
-        block(
-            "Return, risk and validation",
-            "Model-implied E(r) and volatility sit beside realised history, simulated "
-            "long-horizon outcomes and strictly out-of-sample entry tests. These are "
-            "different lenses, so they should be read together rather than collapsed into one score.",
-        )
+        block("Return, risk and validation", guide.caption("summary_return"))
         tables.render(
             tables.style(
                 selection_scorecard[return_columns],
@@ -3376,12 +3144,7 @@ with tab_decision:
             )
         )
 
-        block(
-            "Diversification and implementation",
-            "The holding count shows what is owned; the effective counts show how concentrated "
-            "capital and risk really are. Capital to Reallocate shows how much of the current "
-            "portfolio would have to move to reach each starting allocation.",
-        )
+        block("Diversification and implementation", guide.caption("summary_div"))
         tables.render(
             tables.style(
                 selection_scorecard[diversification_columns],
@@ -3453,26 +3216,7 @@ with tab_decision:
                     )
                 )
 
-        with st.expander("ⓘ What 'Capital to Reallocate' means", expanded=False):
-            st.markdown(
-                r"""
-                **Capital to Reallocate** measures the minimum share of the current portfolio
-                that would need to move into different holdings to reach the alternative
-                starting allocation:
-
-                $$\frac{1}{2}\sum_i |w_i - w_i^{current}|$$
-
-                A value of **40%** means roughly 40 cents of every dollar currently invested
-                would need to be moved. It is a one-time allocation distance, not an assumption
-                that the portfolio will be periodically rebalanced afterward.
-                """
-            )
-
-        block(
-            "Starting allocation comparison",
-            "Choose the portfolios you want to inspect. These are starting weights only; "
-            "the buy-and-hold analysis allows them to drift naturally afterward.",
-        )
+        block("Starting allocation comparison", guide.caption("alloc_compare"))
         allocation_defaults = [
             name
             for name in [
@@ -3609,7 +3353,9 @@ with tab_decision:
             ]
 
         export_bar(
-            pdf_builder("Section 6 — Summary of Findings", _section6_blocks),
+            pdf_builder(
+                "Section 6 — Summary of Findings", guided("summary", _section6_blocks)
+            ),
             stamp("section-6-summary-of-findings"),
             excel_builder(_section6_tables),
             stamp("section-6-summary-of-findings"),
@@ -3617,7 +3363,11 @@ with tab_decision:
             key_prefix="s6",
         )
         SECTION_EXPORTS.append(
-            ("Section 6 — Summary of Findings", _section6_blocks, _section6_tables)
+            (
+                "Section 6 — Summary of Findings",
+                guided("summary", _section6_blocks),
+                _section6_tables,
+            )
         )
 
 
@@ -3639,7 +3389,8 @@ def _full_report_blocks() -> list:
     for index, (_, factory, _unused) in enumerate(SECTION_EXPORTS):
         if index:
             blocks.append(ex.PageBreak())
-        blocks.extend(factory())
+        blocks.extend(factory(with_terms=False))
+    blocks.extend(guide.pdf_glossary())
     return blocks
 
 

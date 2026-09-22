@@ -1,7 +1,5 @@
 # Portfolio Allocation Testing
 
-Live Streamlit app here: https://portfolio-allocation-testing.streamlit.app/
-
 A **returns-only strategic portfolio research engine** for long-term, buy-and-hold
 ETF allocation, delivered as a Streamlit application with print-ready PDF and Excel
 export.
@@ -170,6 +168,21 @@ A **Complete research report** bundles all six sections into one document. The r
 
 ---
 
+## Plain-English guide
+
+The analysis is dense, so every page also explains itself for a reader with no investing
+background:
+
+- an **In plain English** card at the top of each page (what it does, what to look for, what it
+  cannot tell you);
+- a collapsible guide to every term on the page, with a worked example;
+- a start-here panel on the landing screen, and plain-language tooltips on every sidebar control;
+- the same summaries and key terms in the PDFs, plus a glossary at the end of the full report.
+
+All of this copy lives in `src/guide.py` and is checked by `tests/test_guide.py`.
+
+---
+
 ## Visual system — *Ledger*
 
 The design system lives in `src/theme.py` and is shared by the Streamlit UI, Altair
@@ -210,6 +223,7 @@ A ticker retains the same colour across the app and exported report.
 │   ├── charts.py           # on-screen Altair charts
 │   ├── tables.py           # formatting and workbook export
 │   ├── exporting.py        # print-ready PDF engine
+│   ├── guide.py            # plain-English copy: page summaries, glossary, tooltips
 │   └── ui.py               # Streamlit components / CSS
 ├── config/
 │   ├── universe.yaml
